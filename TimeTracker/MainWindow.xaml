@@ -1,0 +1,34 @@
+﻿<Window x:Class="TimeTracker.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:TimeTracker"
+        mc:Ignorable="d"
+        Title="MainWindow" Height="489" Width="551">
+    <Grid>
+        <Button x:Name="btnStart" Content="Start" HorizontalAlignment="Left" Margin="311,16,0,0" VerticalAlignment="Top" Width="75" Click="btnStart_Click"/>
+        <Label x:Name="lblCurrentItem" Content="" HorizontalAlignment="Left" Margin="22,59,0,0" VerticalAlignment="Top" Width="261"/>
+        <Button x:Name="btnEnd" Content="End" HorizontalAlignment="Left" VerticalAlignment="Top" Width="75" Margin="311,59,0,0" Click="btnEnd_Click"/>
+        <TextBox x:Name="txtWorkItem" HorizontalAlignment="Left" Height="23" Margin="22,16,0,0" TextWrapping="Wrap" Text="" VerticalAlignment="Top" Width="261"/>
+        <Button x:Name="btnLogIn" Content="Log In" HorizontalAlignment="Left" Margin="440,16,0,0" VerticalAlignment="Top" Width="75" Click="btnLogIn_Click"/>
+        <Button x:Name="btnLogOut" Content="Log Out" HorizontalAlignment="Left" Margin="440,59,0,0" VerticalAlignment="Top" Width="75" Click="btnLogOut_Click" IsEnabled="False"/>
+        <ListView Name="ListView" Margin="10,138,10,6" MouseDoubleClick="ListView_MouseDoubleClick">
+            <ListView.View>
+                <GridView >
+                    <GridViewColumn Header="Item" Width="120" DisplayMemberBinding="{Binding WorkItem}" />
+                    <GridViewColumn Header="Monday" Width="50" DisplayMemberBinding="{Binding Monday}" />
+                    <GridViewColumn Header="Tuesday" Width="50" DisplayMemberBinding="{Binding Tuesday}" />
+                    <GridViewColumn Header="Wednesday" Width="50" DisplayMemberBinding="{Binding Wednesday}" />
+                    <GridViewColumn Header="Thursday" Width="50" DisplayMemberBinding="{Binding Thursday}" />
+                    <GridViewColumn Header="Friday" Width="50" DisplayMemberBinding="{Binding Friday}" />
+                    <GridViewColumn Header="Saturday" Width="50" DisplayMemberBinding="{Binding Saturday}" />
+                    <GridViewColumn Header="Sunday" Width="50" DisplayMemberBinding="{Binding Sunday}" />
+                    <GridViewColumn Header="Total" Width="50" DisplayMemberBinding="{Binding Total}" />
+                </GridView>
+            </ListView.View>
+        </ListView>
+        <Label x:Name="lblTimesheetName" Content="" HorizontalAlignment="Left" Margin="22,107,0,0" VerticalAlignment="Top" Width="261"/>
+
+    </Grid>
+</Window>
