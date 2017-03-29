@@ -15,12 +15,7 @@ namespace TimeTrackerLibrary.Models
         public List<TimeSpent> TimeSpentList{ get; set; }
 
         public int TotalTime {
-            get
-            {
-                return TimeSpentList
-                    .Where(timeSpent => timeSpent.StartTime != null && timeSpent.EndTime != null)
-                    .Aggregate(0, (total, timeSpent) => total + (timeSpent.EndTime - timeSpent.StartTime).Value.Seconds);
-            }
+            get { return TimeSpentList.Aggregate(0, (total, timeSpent) => (total + timeSpent.DurationInMinutes)); }
         }
     }
 }

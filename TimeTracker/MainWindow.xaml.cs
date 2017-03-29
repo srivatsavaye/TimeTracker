@@ -4,7 +4,9 @@ using System.IO;
 using System.Linq;
 using System.Windows;
 using System.Windows.Input;
+using Microsoft.Win32;
 using Newtonsoft.Json;
+using TimeTrackerLibrary;
 using TimeTrackerLibrary.Models;
 
 namespace TimeTracker
@@ -16,14 +18,44 @@ namespace TimeTracker
     {
 
         private TimeSheet _timeSheet;
-        private string path = "Timesheets";
         private DayOfWeek _today;
+        private readonly ITimeSheetRepository _timeSheetRepository;
+        private readonly IClock _clock;
+
         public MainWindow()
         {
+            _timeSheetRepository = new TimeSheetRepository();
+            _clock = new Clock();
             InitializeComponent();
             LoadTimeSheet();
+            SystemEvents.SessionSwitch += SystemEvents_SessionSwitch;
             LoadGrid();
-            //_timeSheet.Days.Select(d => d.DayNumber)
+            PopulateLogInTimes(GetWorkDay());
+        }
+
+        void SystemEvents_SessionSwitch(object sender, SessionSwitchEventArgs e)
+        {
+            var workDay = GetWorkDay();
+            switch (e.Reason)
+            {
+                case SessionSwitchReason.SessionLock:
+                {
+                    var screenOn = workDay.ScreenOns.FirstOrDefault(s => s.IsActive);
+                    if (screenOn != null)
+                    {
+                        screenOn.EndTime = DateTime.Now;
+                        screenOn.IsActive = false;
+                    }
+                }
+                    break;
+                case SessionSwitchReason.SessionUnlock:
+                {
+                    workDay.ScreenOns.Add(new TimeSpent(_clock));
+                }
+                    break;
+            }
+            PopulateLogInTimes(workDay);
+            Save();
         }
 
         private void LoadGrid()
@@ -34,97 +66,43 @@ namespace TimeTracker
         private IEnumerable<GridItem> GetGridItems()
         {
             var workItems = new List<string>();
-            workItems.AddRange(_timeSheet.Sunday.WorkItems.Select(w => w.Name));
-            workItems.AddRange(_timeSheet.Saturday.WorkItems.Select(w => w.Name));
-            workItems.AddRange(_timeSheet.Friday.WorkItems.Select(w => w.Name));
-            workItems.AddRange(_timeSheet.Thursday.WorkItems.Select(w => w.Name));
-            workItems.AddRange(_timeSheet.Wednesday.WorkItems.Select(w => w.Name));
-            workItems.AddRange(_timeSheet.Tuesday.WorkItems.Select(w => w.Name));
-            workItems.AddRange(_timeSheet.Monday.WorkItems.Select(w => w.Name));
+            workItems.AddRange(_timeSheet.WorkDays.SelectMany(w => w.Value.WorkItems.Select(r => r.Name)));
             var distinctWorkItems = workItems.Distinct().ToList();
-            //var gridData = new TimeSheetGridView();
 
-            var gridItems = new List<GridItem>();
-
-            foreach (var distinctWorkItem in distinctWorkItems)
-            {
-                var gridItem = new GridItem();
-                var total = 0.0;
-                var item = _timeSheet.Sunday.WorkItems.FirstOrDefault(i => i.Name == distinctWorkItem);
-                if (item != null)
-                {
-                    gridItem.WorkItem = distinctWorkItem;
-                    gridItem.Sunday = item.TotalTime;
-                    total += item.TotalTime;
-                }
-
-                item = _timeSheet.Saturday.WorkItems.FirstOrDefault(i => i.Name == distinctWorkItem);
-                if (item != null)
-                {
-                    gridItem.WorkItem = distinctWorkItem;
-                    gridItem.Saturday = item.TotalTime;
-                    total += item.TotalTime;
-                }
-
-                item = _timeSheet.Friday.WorkItems.FirstOrDefault(i => i.Name == distinctWorkItem);
-                if (item != null)
-                {
-                    gridItem.WorkItem = distinctWorkItem;
-                    gridItem.Friday = item.TotalTime;
-                    total += item.TotalTime;
-                }
-
-                item = _timeSheet.Thursday.WorkItems.FirstOrDefault(i => i.Name == distinctWorkItem);
-                if (item != null)
-                {
-                    gridItem.WorkItem = distinctWorkItem;
-                    gridItem.Thursday = item.TotalTime;
-                    total += item.TotalTime;
-                }
-
-                item = _timeSheet.Wednesday.WorkItems.FirstOrDefault(i => i.Name == distinctWorkItem);
-                if (item != null)
-                {
-                    gridItem.WorkItem = distinctWorkItem;
-                    gridItem.Wednesday = item.TotalTime;
-                    total += item.TotalTime;
-                }
-
-                item = _timeSheet.Tuesday.WorkItems.FirstOrDefault(i => i.Name == distinctWorkItem);
-                if (item != null)
-                {
-                    gridItem.WorkItem = distinctWorkItem;
-                    gridItem.Tuesday = item.TotalTime;
-                    total += item.TotalTime;
-                }
-
-                item = _timeSheet.Monday.WorkItems.FirstOrDefault(i => i.Name == distinctWorkItem);
-                if (item != null)
-                {
-                    gridItem.WorkItem = distinctWorkItem;
-                    gridItem.Monday = item.TotalTime;
-                    total += item.TotalTime;
-                }
-
-                gridItem.Total = total;
-                gridItems.Add(gridItem);
-            }
-
-            var totalGridItem = new GridItem
-            {
-                WorkItem = "Total",
-                Sunday = _timeSheet.Sunday.WorkItems.Select(w => w.TotalTime).Sum(),
-                Saturday = _timeSheet.Saturday.WorkItems.Select(w => w.TotalTime).Sum(),
-                Friday = _timeSheet.Friday.WorkItems.Select(w => w.TotalTime).Sum(),
-                Thursday = _timeSheet.Thursday.WorkItems.Select(w => w.TotalTime).Sum(),
-                Wednesday = _timeSheet.Wednesday.WorkItems.Select(w => w.TotalTime).Sum(),
-                Tuesday = _timeSheet.Tuesday.WorkItems.Select(w => w.TotalTime).Sum(),
-                Monday = _timeSheet.Monday.WorkItems.Select(w => w.TotalTime).Sum()
-            };
-
-            gridItems.Add(totalGridItem);
+            var gridItems = distinctWorkItems.Select(PopulateGridItem).ToList();
+            gridItems.Add(PopulateTotalGridItem());
 
             return gridItems;
+        }
+
+        private GridItem PopulateGridItem(string distinctWorkItem)
+        {
+            var gridItem = new GridItem();
+            var total = 0.0;
+
+            for (var i = 0; i < 7; i++)
+            {
+                var item = _timeSheet.WorkDays[i].WorkItems.FirstOrDefault(v => v.Name == distinctWorkItem);
+                gridItem.WorkItem = distinctWorkItem;
+                gridItem.WorkDays[i] = item?.TotalTime ?? 0;
+                total += item?.TotalTime ?? 0;
+            }
+            gridItem.Total = total;
+            return gridItem;
+        }
+
+        private GridItem PopulateTotalGridItem()
+        {
+            var totalGridItem = new GridItem
+            {
+                WorkItem = "Total"
+            };
+            for (var i = 0; i < 7; i++)
+            {
+                totalGridItem.WorkDays[i] = _timeSheet.WorkDays[i].WorkItems.Select(w => w.TotalTime).Sum();
+            }
+
+            return totalGridItem;
         }
 
         private void LoadTimeSheet()
@@ -165,7 +143,7 @@ namespace TimeTracker
             var endDay = now.AddDays(numberOfdaysToAdd);
 
             var timeSheetName =
-                $"WeekEnding_{endDay.Year}{(endDay.Month < 10 ? $"0{endDay.Month}" : endDay.Month.ToString())}{(endDay.Day.ToString().Length == 1 ? $"0{endDay.Day}" : endDay.Day.ToString())}";
+                $"{Constants.TimeSheetPrefix}{endDay.Year}{(endDay.Month < 10 ? $"0{endDay.Month}" : endDay.Month.ToString())}{(endDay.Day.ToString().Length == 1 ? $"0{endDay.Day}" : endDay.Day.ToString())}";
 
             lblTimesheetName.Content = timeSheetName;
             _today = now.DayOfWeek;
@@ -173,101 +151,39 @@ namespace TimeTracker
             if (_timeSheet == null)
             {
                 _timeSheet = new TimeSheet(timeSheetName);
-                //_timeSheet.Days.Add(new WorkDay(today));
+            }
+            var workDay = GetWorkDay();
+            var inProgessWorkItem = workDay.WorkItems.FirstOrDefault(w => w.TimeSpentList.Any(t => !t.EndTime.HasValue));
+            if (inProgessWorkItem != null)
+            {
+                lblCurrentItem.Content = inProgessWorkItem.Name;
+                txtWorkItem.Text = inProgessWorkItem.Name;
+            }
+            
+            if (workDay.ScreenOns.Count == 0 || workDay.ScreenOns.Count(s => s.EndTime.HasValue == false) == 0)
+            {
+                workDay.ScreenOns.Add(new TimeSpent(_clock));
             }
         }
 
         private void Save()
         {
             var text = JsonConvert.SerializeObject(_timeSheet);
-            File.WriteAllText(path + @"\" +_timeSheet.WeekEnding, text);
+            _timeSheetRepository.Write(_timeSheet.WeekEnding, text);
             LoadGrid();
         }
 
         private TimeSheet ReadFile(string name)
         {
-            if (File.Exists(path + @"\" + name))
-            {
-                var text = File.ReadAllText(path + @"\" + name);
-                var timeSheet = JsonConvert.DeserializeObject<TimeSheet>(text);
-                return timeSheet;
-            }
-            return null;
+            var text = _timeSheetRepository.Read(name);
+            return string.IsNullOrEmpty(text) ? null : JsonConvert.DeserializeObject<TimeSheet>(text);
         }
 
         #region "Event Handlers"
         private void btnStart_Click(object sender, RoutedEventArgs e)
         {
             var workItemName = txtWorkItem.Text;
-            if (!string.IsNullOrEmpty(workItemName))
-            {
-                //var workDay = _timeSheet.Days.FirstOrDefault(d => d.DayNumber == today);
-                //if (workDay == null)
-                //{
-                //    workDay = new WorkDay(today);
-                //    _timeSheet.Days.Add(workDay);
-                //}
-
-                var workDay = GetWorkDay();
-                
-                foreach (var item in workDay.WorkItems.Where(i => i.TimeSpentList.Any(j => j.IsActive)))
-                {
-                    foreach (var i in item.TimeSpentList.Where(l => l.IsActive))
-                    {
-                        i.IsActive = false;
-                        i.EndTime = DateTime.Now;
-                    }
-                }
-                var workItem = workDay.WorkItems.FirstOrDefault(t => t.Name.Equals(workItemName));
-                if (workItem == null)
-                {
-                    workItem = new WorkItem(workItemName);
-                    workDay.WorkItems.Add(workItem);
-                }
-                foreach (var timeSpent in workItem.TimeSpentList.Where(l => l.IsActive))
-                {
-                    timeSpent.EndTime = DateTime.Now;
-                    timeSpent.IsActive = false;
-                }
-                workItem.TimeSpentList.Add(new TimeSpent { StartTime = DateTime.Now, IsActive = true });
-
-                lblCurrentItem.Content = workItemName;
-                Save();
-            }
-            else
-            {
-                MessageBox.Show("Please enter a workItem");
-            }
-        }
-
-        private WorkDay GetWorkDay()
-        {
-            var workDay = _timeSheet.Sunday;
-            switch (_today)
-            {
-                case DayOfWeek.Sunday:
-                    workDay = _timeSheet.Sunday;
-                    break;
-                case DayOfWeek.Saturday:
-                    workDay = _timeSheet.Saturday;
-                    break;
-                case DayOfWeek.Friday:
-                    workDay = _timeSheet.Friday;
-                    break;
-                case DayOfWeek.Thursday:
-                    workDay = _timeSheet.Thursday;
-                    break;
-                case DayOfWeek.Wednesday:
-                    workDay = _timeSheet.Wednesday;
-                    break;
-                case DayOfWeek.Tuesday:
-                    workDay = _timeSheet.Tuesday;
-                    break;
-                case DayOfWeek.Monday:
-                    workDay = _timeSheet.Monday;
-                    break;
-            }
-            return workDay;
+            StartLog(workItemName);
         }
 
 
@@ -305,52 +221,118 @@ namespace TimeTracker
             }
         }
 
-        private void btnLogIn_Click(object sender, RoutedEventArgs e)
-        {
-            var workDay = GetWorkDay();
-            if (workDay != null)
-            {
-                workDay.CheckIn = DateTime.Now;
-                btnLogIn.IsEnabled = false;
-                btnLogOut.IsEnabled = true;
-            }
-            Save();
-        }
-
-        private void btnLogOut_Click(object sender, RoutedEventArgs e)
-        {
-            var workDay = GetWorkDay();
-            if (workDay != null)
-            {
-                workDay.CheckOut = DateTime.Now;
-                btnLogIn.IsEnabled = true;
-                btnLogOut.IsEnabled = false;
-            }
-            Save();
-        }
-
-        #endregion "Event Handlers"
-
         private void ListView_MouseDoubleClick(object sender, MouseButtonEventArgs e)
         {
-            var selectedWorkItem = ((GridItem) ((System.Windows.Controls.Primitives.Selector) e.Source).SelectedItem).WorkItem;
+            var selectedWorkItem = ((GridItem)((System.Windows.Controls.Primitives.Selector)e.Source).SelectedItem).WorkItem;
             if (!string.Equals(selectedWorkItem, "total", StringComparison.InvariantCultureIgnoreCase))
             {
                 txtWorkItem.Text = selectedWorkItem;
+                StartLog(selectedWorkItem);
             }
+        }
+
+        private void btnRefresh_Click(object sender, RoutedEventArgs e)
+        {
+            PopulateLogInTimes(GetWorkDay());
+            LoadGrid();
+            Save();
+        }
+
+        //private void btnLogIn_Click(object sender, RoutedEventArgs e)
+        //{
+        //    var workDay = GetWorkDay();
+        //    if (workDay != null)
+        //    {
+        //        workDay.CheckIn = DateTime.Now;
+        //        btnLogIn.IsEnabled = false;
+        //        btnLogOut.IsEnabled = true;
+        //    }
+        //    Save();
+        //}
+
+        //private void btnLogOut_Click(object sender, RoutedEventArgs e)
+        //{
+        //    var workDay = GetWorkDay();
+        //    if (workDay != null)
+        //    {
+        //        workDay.CheckOut = DateTime.Now;
+        //        btnLogIn.IsEnabled = true;
+        //        btnLogOut.IsEnabled = false;
+        //    }
+        //    Save();
+        //}
+
+        #endregion "Event Handlers"
+
+
+        private void PopulateLogInTimes(WorkDay workDay)
+        {
+            if(workDay.ScreenOns.Count == 0) return;
+            lblTotalDuration.Content = $"Total Time Logged In Today: {workDay.ScreenOns.Select(r => r.ActiveDurationInMinutes).Sum()}";
+            if(workDay.ScreenOns.Count(s => s.StartTime.HasValue) == 0) return;
+            lblFirstLogin.Content = $"First LogIn Today: {workDay.ScreenOns.Where(s => s.StartTime.HasValue).Select(s => s.StartTime.Value).Min()}";
+            if(workDay.ScreenOns.Count(s => s.EndTime.HasValue) == 0) return;
+            lblLastLogin.Content = $"Last LogIn Today: {workDay.ScreenOns.Where(s => s.EndTime.HasValue).Select(s => s.EndTime.Value).Min()}";
+        }
+
+        private void StartLog(string workItemName)
+        {
+            if (!string.IsNullOrEmpty(workItemName))
+            {
+                var workDay = GetWorkDay();
+
+                foreach (var item in workDay.WorkItems.Where(i => i.TimeSpentList.Any(j => j.IsActive)))
+                {
+                    foreach (var i in item.TimeSpentList.Where(l => l.IsActive))
+                    {
+                        i.IsActive = false;
+                        i.EndTime = DateTime.Now;
+                    }
+                }
+                var workItem = workDay.WorkItems.FirstOrDefault(t => t.Name.Equals(workItemName));
+                if (workItem == null)
+                {
+                    workItem = new WorkItem(workItemName);
+                    workDay.WorkItems.Add(workItem);
+                }
+                foreach (var timeSpent in workItem.TimeSpentList.Where(l => l.IsActive))
+                {
+                    timeSpent.EndTime = DateTime.Now;
+                    timeSpent.IsActive = false;
+                }
+                workItem.TimeSpentList.Add(new TimeSpent(_clock) { StartTime = DateTime.Now, IsActive = true });
+
+                lblCurrentItem.Content = workItemName;
+                Save();
+            }
+            else
+            {
+                MessageBox.Show("Please enter a workItem");
+            }
+        }
+
+        private WorkDay GetWorkDay()
+        {
+            var today = (int)Enum.Parse(typeof(DayOfWeek), Enum.GetName(typeof(DayOfWeek), _today));
+            return _timeSheet.WorkDays[today];
         }
     }
 
     public class GridItem
     {
+        public GridItem()
+        {
+            WorkDays = new Dictionary<int, double>();
+        }
         public string WorkItem { get; set; }
-        public double Monday { get; set; }
-        public double Tuesday { get; set; }
-        public double Wednesday { get; set; }
-        public double Thursday { get; set; }
-        public double Friday { get; set; }
-        public double Saturday { get; set; }
-        public double Sunday { get; set; }
+        public Dictionary<int, double> WorkDays { get; set; }
+        //public double Monday { get; set; }
+        //public double Tuesday { get; set; }
+        //public double Wednesday { get; set; }
+        //public double Thursday { get; set; }
+        //public double Friday { get; set; }
+        //public double Saturday { get; set; }
+        //public double Sunday { get; set; }
         public double Total { get; set; }
     }
 }

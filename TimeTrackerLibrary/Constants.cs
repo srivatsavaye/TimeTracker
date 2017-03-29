@@ -6,7 +6,8 @@ using System.Threading.Tasks;
 
 namespace TimeTrackerLibrary
 {
-    public class Class1
+    public static class Constants
     {
+        public const string TimeSheetPrefix = "WeekEnding_";
     }
 }

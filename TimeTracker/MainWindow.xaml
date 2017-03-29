@@ -5,30 +5,36 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:TimeTracker"
         mc:Ignorable="d"
-        Title="MainWindow" Height="489" Width="551">
-    <Grid>
-        <Button x:Name="btnStart" Content="Start" HorizontalAlignment="Left" Margin="311,16,0,0" VerticalAlignment="Top" Width="75" Click="btnStart_Click"/>
-        <Label x:Name="lblCurrentItem" Content="" HorizontalAlignment="Left" Margin="22,59,0,0" VerticalAlignment="Top" Width="261"/>
-        <Button x:Name="btnEnd" Content="End" HorizontalAlignment="Left" VerticalAlignment="Top" Width="75" Margin="311,59,0,0" Click="btnEnd_Click"/>
-        <TextBox x:Name="txtWorkItem" HorizontalAlignment="Left" Height="23" Margin="22,16,0,0" TextWrapping="Wrap" Text="" VerticalAlignment="Top" Width="261"/>
-        <Button x:Name="btnLogIn" Content="Log In" HorizontalAlignment="Left" Margin="440,16,0,0" VerticalAlignment="Top" Width="75" Click="btnLogIn_Click"/>
-        <Button x:Name="btnLogOut" Content="Log Out" HorizontalAlignment="Left" Margin="440,59,0,0" VerticalAlignment="Top" Width="75" Click="btnLogOut_Click" IsEnabled="False"/>
+        Title="MainWindow" Height="489" Width="872">
+    <Grid HorizontalAlignment="Left" Width="862">
+        <Button x:Name="btnStart" Content="Start" HorizontalAlignment="Left" Margin="22,44,0,0" VerticalAlignment="Top" Width="75" Click="btnStart_Click"/>
+        <Label x:Name="lblCurrentItem" Content="" HorizontalAlignment="Left" Margin="196,44,0,0" VerticalAlignment="Top" Width="250"/>
+        <Button x:Name="btnEnd" Content="End" HorizontalAlignment="Left" VerticalAlignment="Top" Width="75" Margin="102,44,0,0" Click="btnEnd_Click"/>
+        <TextBox x:Name="txtWorkItem" HorizontalAlignment="Left" Height="23" Margin="22,16,0,0" TextWrapping="Wrap" Text="" VerticalAlignment="Top" Width="600"/>
+        <!--<Button x:Name="btnLogIn" Content="Log In" HorizontalAlignment="Left" Margin="440,16,0,0" VerticalAlignment="Top" Width="75" Click="btnLogIn_Click" Visibility="Hidden"/>
+        <Button x:Name="btnLogOut" Content="Log Out" HorizontalAlignment="Left" Margin="440,59,0,0" VerticalAlignment="Top" Width="75" Click="btnLogOut_Click" IsEnabled="False" Visibility="Hidden"/>-->
         <ListView Name="ListView" Margin="10,138,10,6" MouseDoubleClick="ListView_MouseDoubleClick">
             <ListView.View>
                 <GridView >
-                    <GridViewColumn Header="Item" Width="120" DisplayMemberBinding="{Binding WorkItem}" />
-                    <GridViewColumn Header="Monday" Width="50" DisplayMemberBinding="{Binding Monday}" />
-                    <GridViewColumn Header="Tuesday" Width="50" DisplayMemberBinding="{Binding Tuesday}" />
-                    <GridViewColumn Header="Wednesday" Width="50" DisplayMemberBinding="{Binding Wednesday}" />
-                    <GridViewColumn Header="Thursday" Width="50" DisplayMemberBinding="{Binding Thursday}" />
-                    <GridViewColumn Header="Friday" Width="50" DisplayMemberBinding="{Binding Friday}" />
-                    <GridViewColumn Header="Saturday" Width="50" DisplayMemberBinding="{Binding Saturday}" />
-                    <GridViewColumn Header="Sunday" Width="50" DisplayMemberBinding="{Binding Sunday}" />
-                    <GridViewColumn Header="Total" Width="50" DisplayMemberBinding="{Binding Total}" />
+                    <GridViewColumn Header="Item" Width="150" DisplayMemberBinding="{Binding WorkItem}" />
+                    <GridViewColumn Header="Monday" Width="80" DisplayMemberBinding="{Binding WorkDays[1]}" />
+                    <GridViewColumn Header="Tuesday" Width="80" DisplayMemberBinding="{Binding WorkDays[2]}" />
+                    <GridViewColumn Header="Wednesday" Width="80" DisplayMemberBinding="{Binding WorkDays[3]}" />
+                    <GridViewColumn Header="Thursday" Width="80" DisplayMemberBinding="{Binding WorkDays[4]}" />
+                    <GridViewColumn Header="Friday" Width="80" DisplayMemberBinding="{Binding WorkDays[5]}" />
+                    <GridViewColumn Header="Saturday" Width="80" DisplayMemberBinding="{Binding WorkDays[6]}" />
+                    <GridViewColumn Header="Sunday" Width="80" DisplayMemberBinding="{Binding WorkDays[0]}" />
+                    <GridViewColumn Header="Total" Width="80" DisplayMemberBinding="{Binding Total}" />
                 </GridView>
             </ListView.View>
         </ListView>
-        <Label x:Name="lblTimesheetName" Content="" HorizontalAlignment="Left" Margin="22,107,0,0" VerticalAlignment="Top" Width="261"/>
+        <Label x:Name="lblTimesheetName" Content="" HorizontalAlignment="Left" Margin="22,107,0,0" VerticalAlignment="Top" Width="261" FontWeight="Bold"/>
+        <Label x:Name="lblFirstLogin" Content="First LogIn Today:" HorizontalAlignment="Left" Margin="629,16,0,0" VerticalAlignment="Top"/>
+        <Label x:Name="lblLastLogin" Content="Last LogIn Today:" HorizontalAlignment="Left" Margin="629,44,0,0" VerticalAlignment="Top"/>
+        <Label x:Name="lblTotalDuration" Content="Total Time Logged In Today:" HorizontalAlignment="Left" Margin="629,70,0,0" VerticalAlignment="Top"/>
+        <Button x:Name="btnRefresh"  HorizontalAlignment="Left" Margin="583,44,0,0" VerticalAlignment="Top" Width="39" Height="38" Click="btnRefresh_Click">
+            <Image x:Name="image" Source="Content/Refresh.png" Stretch="UniformToFill" />
+        </Button>
 
     </Grid>
 </Window>

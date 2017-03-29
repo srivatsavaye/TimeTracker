@@ -10,15 +10,14 @@ namespace TimeTrackerLibrary.Models
             DayNumber = dayNumber;
             Date = date;
             WorkItems = new List<WorkItem>();
+            ScreenOns = new List<TimeSpent>();
         }
         public DayOfWeek DayNumber { get; set; }
 
         public DateTime Date { get; set; }
 
-        public DateTime? CheckIn { get; set; }
-
-        public DateTime? CheckOut { get; set; }
-
         public List<WorkItem> WorkItems { get; set; }
+
+        public List<TimeSpent> ScreenOns { get; set; }
     }
 }
